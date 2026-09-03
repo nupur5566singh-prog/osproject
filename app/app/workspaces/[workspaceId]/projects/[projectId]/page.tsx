@@ -1,11 +1,19 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProjectById, getWorkspaceById } from '@/lib/queries/workspace';
+import {
+  getProjectTasks,
+  getWorkspaceLabels,
+  getProjectMembers,
+  getProjectTaskStats,
+} from '@/lib/queries/tasks';
+import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ComingSoon } from '@/components/shared/coming-soon';
+import { TaskBoard } from '@/components/tasks/task-board';
 import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowLeft,
@@ -15,6 +23,8 @@ import {
   Calendar,
   User,
   FolderKanban,
+  CheckCircle2,
+  CircleDot,
 } from 'lucide-react';
 
 export default async function ProjectDetailPage({
@@ -30,6 +40,17 @@ export default async function ProjectDetailPage({
   if (!workspace) notFound();
 
   const isSoftware = project.project_type === 'software';
+
+  const tasks = await getProjectTasks(project.id);
+  const labels = await getWorkspaceLabels(workspace.id);
+  const members = await getProjectMembers(project.id);
+  const stats = await getProjectTaskStats(project.id);
+
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const currentUserId = session?.user.id ?? '';
 
   return (
     <div className="space-y-6">
@@ -84,7 +105,7 @@ export default async function ProjectDetailPage({
           <TabsTrigger value="sprints">Sprints</TabsTrigger>
         </TabsList>
 
-        {/* Overview — functional */}
+        {/* Overview — functional with real stats */}
         <TabsContent value="overview" className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card>
@@ -93,7 +114,7 @@ export default async function ProjectDetailPage({
                   <FolderKanban className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold">0</div>
+                  <div className="text-xl font-bold">{stats.total}</div>
                   <div className="text-xs text-muted-foreground">Total tasks</div>
                 </div>
               </CardContent>
@@ -101,10 +122,10 @@ export default async function ProjectDetailPage({
             <Card>
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
-                  <LayoutGrid className="h-5 w-5" />
+                  <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold">0</div>
+                  <div className="text-xl font-bold">{stats.completed}</div>
                   <div className="text-xs text-muted-foreground">Completed</div>
                 </div>
               </CardContent>
@@ -112,11 +133,11 @@ export default async function ProjectDetailPage({
             <Card>
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600">
-                  <User className="h-5 w-5" />
+                  <CircleDot className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold">1</div>
-                  <div className="text-xs text-muted-foreground">Member</div>
+                  <div className="text-xl font-bold">{stats.remaining}</div>
+                  <div className="text-xs text-muted-foreground">Remaining</div>
                 </div>
               </CardContent>
             </Card>
@@ -142,6 +163,10 @@ export default async function ProjectDetailPage({
                 <span className="font-medium">{workspace.name}</span>
               </div>
               <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Members</span>
+                <span className="font-medium">{members.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Created</span>
                 <span className="font-medium">
                   {formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}
@@ -149,20 +174,44 @@ export default async function ProjectDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          {tasks.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-base">Recent tasks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {tasks.slice(0, 5).map((task) => (
+                    <div key={task.id} className="flex items-center gap-2 text-sm">
+                      <span className={`h-2 w-2 rounded-full ${
+                        task.status === 'done' ? 'bg-green-500' :
+                        task.status === 'in_progress' ? 'bg-blue-500' : 'bg-slate-400'
+                      }`} />
+                      <span className={task.status === 'done' ? 'text-muted-foreground line-through' : ''}>
+                        {task.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* List — functional */}
+        <TabsContent value="list" className="mt-6">
+          <TaskBoard
+            tasks={tasks}
+            members={members}
+            labels={labels}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
         </TabsContent>
 
         {/* Other tabs — coming soon */}
-        <TabsContent value="list" className="mt-6">
-          <Card>
-            <CardContent>
-              <ComingSoon
-                feature="List View"
-                description="A powerful list view for managing all your tasks in one place — with sorting, filtering, and bulk actions."
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="board" className="mt-6">
           <Card>
             <CardContent>
