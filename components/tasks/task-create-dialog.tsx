@@ -40,6 +40,7 @@ interface TaskCreateDialogProps {
   members: ProjectMemberInfo[];
   labels: LabelType[];
   parentTaskId?: string | null;
+  defaultStatus?: TaskStatus;
   onCreated?: () => void;
 }
 
@@ -51,6 +52,7 @@ export function TaskCreateDialog({
   members,
   labels,
   parentTaskId = null,
+  defaultStatus = 'todo',
   onCreated,
 }: TaskCreateDialogProps) {
   const router = useRouter();
@@ -68,14 +70,14 @@ export function TaskCreateDialog({
     if (open) {
       setTitle('');
       setDescription('');
-      setStatus('todo');
+      setStatus(defaultStatus);
       setPriority('none');
       setAssigneeId('unassigned');
       setDueDate('');
       setSelectedLabels([]);
       setError(null);
     }
-  }, [open]);
+  }, [open, defaultStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

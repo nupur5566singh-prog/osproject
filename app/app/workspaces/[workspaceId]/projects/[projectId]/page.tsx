@@ -7,6 +7,7 @@ import {
   getProjectMembers,
   getProjectTaskStats,
 } from '@/lib/queries/tasks';
+import { getProjectSprints, getActiveSprint, getProjectOverdueTasks } from '@/lib/queries/sprints';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,18 +15,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ComingSoon } from '@/components/shared/coming-soon';
 import { TaskBoard } from '@/components/tasks/task-board';
-import { formatDistanceToNow } from 'date-fns';
+import { KanbanBoard } from '@/components/tasks/kanban-board';
+import { BacklogView } from '@/components/tasks/backlog-view';
+import { SprintsView } from '@/components/tasks/sprints-view';
+import { formatDistanceToNow, format } from 'date-fns';
 import {
   ArrowLeft,
   Settings,
   Code2,
   LayoutGrid,
   Calendar,
-  User,
   FolderKanban,
   CheckCircle2,
   CircleDot,
+  AlertTriangle,
+  Rocket,
 } from 'lucide-react';
+import { getSprintStatusInfo } from '@/lib/types/tasks';
+import { cn } from '@/lib/utils';
 
 export default async function ProjectDetailPage({
   params,
@@ -45,6 +52,9 @@ export default async function ProjectDetailPage({
   const labels = await getWorkspaceLabels(workspace.id);
   const members = await getProjectMembers(project.id);
   const stats = await getProjectTaskStats(project.id);
+  const overdueCount = await getProjectOverdueTasks(project.id);
+  const sprints = await getProjectSprints(project.id);
+  const activeSprint = await getActiveSprint(project.id);
 
   const supabase = createClient();
   const {
@@ -105,9 +115,9 @@ export default async function ProjectDetailPage({
           <TabsTrigger value="sprints">Sprints</TabsTrigger>
         </TabsList>
 
-        {/* Overview — functional with real stats */}
+        {/* Overview */}
         <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardContent className="flex items-center gap-3 pt-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -141,7 +151,55 @@ export default async function ProjectDetailPage({
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="flex items-center gap-3 pt-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">{overdueCount}</div>
+                  <div className="text-xs text-muted-foreground">Overdue</div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Active sprint card */}
+          {activeSprint && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Rocket className="h-4 w-4 text-blue-500" />
+                  Active Sprint
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{activeSprint.name}</span>
+                      <Badge className={cn('text-xs', getSprintStatusInfo('active').badge)}>Active</Badge>
+                    </div>
+                    {activeSprint.goal && (
+                      <p className="mt-1 text-sm text-muted-foreground">{activeSprint.goal}</p>
+                    )}
+                    {activeSprint.end_date && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Ends {format(new Date(activeSprint.end_date), 'MMM d, yyyy')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold">
+                      {sprints.find((s) => s.id === activeSprint.id)?.completed_tasks ?? 0}
+                      <span className="text-base text-muted-foreground">/{sprints.find((s) => s.id === activeSprint.id)?.total_tasks ?? 0}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">tasks done</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mt-6">
             <CardHeader>
@@ -165,6 +223,10 @@ export default async function ProjectDetailPage({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Members</span>
                 <span className="font-medium">{members.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Sprints</span>
+                <span className="font-medium">{sprints.length}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Created</span>
@@ -199,7 +261,7 @@ export default async function ProjectDetailPage({
           )}
         </TabsContent>
 
-        {/* List — functional */}
+        {/* List */}
         <TabsContent value="list" className="mt-6">
           <TaskBoard
             tasks={tasks}
@@ -211,38 +273,42 @@ export default async function ProjectDetailPage({
           />
         </TabsContent>
 
-        {/* Other tabs — coming soon */}
+        {/* Board — Kanban */}
         <TabsContent value="board" className="mt-6">
-          <Card>
-            <CardContent>
-              <ComingSoon
-                feature="Kanban Board"
-                description="A visual drag-and-drop board for moving tasks across columns and tracking progress at a glance."
-              />
-            </CardContent>
-          </Card>
+          <KanbanBoard
+            tasks={tasks}
+            members={members}
+            labels={labels}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
         </TabsContent>
 
+        {/* Backlog */}
         <TabsContent value="backlog" className="mt-6">
-          <Card>
-            <CardContent>
-              <ComingSoon
-                feature="Backlog"
-                description="Manage your backlog of unassigned tasks and prioritize work before pulling it into sprints."
-              />
-            </CardContent>
-          </Card>
+          <BacklogView
+            tasks={tasks}
+            sprints={sprints}
+            members={members}
+            labels={labels}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
         </TabsContent>
 
+        {/* Sprints */}
         <TabsContent value="sprints" className="mt-6">
-          <Card>
-            <CardContent>
-              <ComingSoon
-                feature="Sprints"
-                description="Plan and track sprints with story points, velocity charts, and sprint goals."
-              />
-            </CardContent>
-          </Card>
+          <SprintsView
+            sprints={sprints}
+            tasks={tasks}
+            members={members}
+            labels={labels}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
         </TabsContent>
       </Tabs>
     </div>

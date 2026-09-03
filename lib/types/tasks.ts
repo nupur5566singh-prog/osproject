@@ -1,21 +1,44 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
+export type SprintStatus = 'planned' | 'active' | 'completed';
 
 export interface Task {
   id: string;
   workspace_id: string;
   project_id: string;
   parent_task_id: string | null;
+  sprint_id: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  position: number | null;
   assignee_id: string | null;
   created_by: string;
   start_date: string | null;
   due_date: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Sprint {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  name: string;
+  goal: string | null;
+  status: SprintStatus;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SprintWithStats extends Sprint {
+  total_tasks: number;
+  completed_tasks: number;
+  remaining_tasks: number;
 }
 
 export interface TaskWithDetails extends Task {
@@ -115,4 +138,14 @@ export function getStatusInfo(status: TaskStatus) {
 
 export function getPriorityInfo(priority: TaskPriority) {
   return TASK_PRIORITIES.find((p) => p.value === priority) ?? TASK_PRIORITIES[0];
+}
+
+export const SPRINT_STATUSES: { value: SprintStatus; label: string; color: string; badge: string }[] = [
+  { value: 'planned', label: 'Planned', color: 'text-slate-600', badge: 'bg-slate-100 text-slate-700' },
+  { value: 'active', label: 'Active', color: 'text-blue-600', badge: 'bg-blue-100 text-blue-700' },
+  { value: 'completed', label: 'Completed', color: 'text-green-600', badge: 'bg-green-100 text-green-700' },
+];
+
+export function getSprintStatusInfo(status: SprintStatus) {
+  return SPRINT_STATUSES.find((s) => s.value === status) ?? SPRINT_STATUSES[0];
 }

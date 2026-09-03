@@ -38,3 +38,27 @@ export const labelSchema = z.object({
 });
 
 export type LabelFormValues = z.infer<typeof labelSchema>;
+
+export const sprintSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Sprint name must be at least 2 characters')
+    .max(80, 'Sprint name must be less than 80 characters'),
+  goal: z
+    .string()
+    .max(500, 'Sprint goal must be less than 500 characters')
+    .optional()
+    .or(z.literal('')),
+  start_date: z.string().optional().or(z.literal('')),
+  end_date: z.string().optional().or(z.literal('')),
+}).refine(
+  (data) => {
+    if (data.start_date && data.end_date) {
+      return new Date(data.start_date) <= new Date(data.end_date);
+    }
+    return true;
+  },
+  { message: 'End date must be after start date', path: ['end_date'] }
+);
+
+export type SprintFormValues = z.infer<typeof sprintSchema>;
