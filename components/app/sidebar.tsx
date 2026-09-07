@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -32,6 +32,7 @@ import {
   LogOut,
   ChevronDown,
   Plus,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WorkspaceWithRole } from '@/lib/types/database';
@@ -45,12 +46,35 @@ const NAV_ITEMS = [
   { label: 'Home', href: '/app', icon: Home },
   { label: 'My Tasks', href: '/app/my-tasks', icon: ListTodo },
   { label: 'Projects', href: '/app/projects', icon: FolderKanban },
-  { label: 'Notifications', href: '/app/notifications', icon: Bell },
+  { label: 'Notifications', href: '/app/notifications', icon: Bell, showBadge: true },
   { label: 'Settings', href: '/app/settings', icon: Settings },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+    let cancelled = false;
+    async function fetchUnread() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { count } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', userId)
+          .is('read_at', null);
+        if (!cancelled) setUnreadCount(count ?? 0);
+      } catch { /* ignore */ }
+    }
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user]);
 
   return (
     <nav className="space-y-1">
@@ -74,6 +98,11 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           >
             <item.icon className="h-4 w-4 shrink-0" />
             {item.label}
+            {item.showBadge && unreadCount > 0 && (
+              <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">
+                {unreadCount}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -127,6 +156,14 @@ function WorkspaceSelector({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        {current && (
+          <Link href={`/app/workspaces/${current.id}/team`}>
+            <DropdownMenuItem>
+              <Users className="mr-2 h-4 w-4" />
+              Team
+            </DropdownMenuItem>
+          </Link>
+        )}
         <Link href="/app/workspaces/new">
           <DropdownMenuItem>
             <Plus className="mr-2 h-4 w-4" />

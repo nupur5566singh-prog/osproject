@@ -8,6 +8,7 @@ import { AuthLayout } from '@/components/shared/auth-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FlaskConical } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { signInSchema, SignInFormValues } from '@/lib/validation/schemas';
 
@@ -111,6 +112,21 @@ export default function LoginPage() {
           Sign up
         </Link>
       </p>
+
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 border-t border-border pt-4">
+          <Link
+            href="/demo"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/20 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+          >
+            <FlaskConical className="h-4 w-4" />
+            Try Demo Preview Mode
+          </Link>
+          <p className="mt-1.5 text-center text-xs text-muted-foreground">
+            Browse the app with sample data — no account needed
+          </p>
+        </div>
+      )}
     </AuthLayout>
   );
 }

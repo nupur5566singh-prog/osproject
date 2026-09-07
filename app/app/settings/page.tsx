@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { createClient } from '@/lib/supabase/client';
 import { User } from 'lucide-react';
+import { NotificationPreferencesCard } from '@/components/settings/notification-preferences';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -124,6 +125,8 @@ export default function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <NotificationPreferencesCard />
     </div>
   );
 }

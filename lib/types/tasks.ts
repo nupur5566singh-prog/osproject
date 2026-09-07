@@ -149,3 +149,141 @@ export const SPRINT_STATUSES: { value: SprintStatus; label: string; color: strin
 export function getSprintStatusInfo(status: SprintStatus) {
   return SPRINT_STATUSES.find((s) => s.value === status) ?? SPRINT_STATUSES[0];
 }
+
+// ============================================================
+// Phase 5: Milestones
+// ============================================================
+export interface Milestone {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  due_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// Phase 6: Collaboration types
+// ============================================================
+export type NotificationType =
+  | 'task_assigned'
+  | 'task_mentioned'
+  | 'comment_added'
+  | 'task_completed'
+  | 'task_status_changed'
+  | 'task_due_soon'
+  | 'task_overdue'
+  | 'sprint_started'
+  | 'sprint_completed'
+  | 'milestone_due';
+
+export interface Notification {
+  id: string;
+  workspace_id: string;
+  recipient_id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  task_id: string | null;
+  project_id: string | null;
+  comment_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  workspace_id: string;
+  project_id: string | null;
+  task_id: string | null;
+  user_id: string;
+  event_type: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface ActivityEventWithUser extends ActivityEvent {
+  user_name: string | null;
+  user_email: string | null;
+}
+
+export interface TaskWatcher {
+  task_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface CommentMention {
+  id: string;
+  comment_id: string;
+  mentioned_user_id: string;
+  created_at: string;
+}
+
+export interface NotificationPreferences {
+  user_id: string;
+  task_assignments: boolean;
+  mentions: boolean;
+  comments: boolean;
+  due_dates: boolean;
+  project_activity: boolean;
+  sprint_activity: boolean;
+}
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  task_assigned: 'Task assigned',
+  task_mentioned: 'Mentioned in task',
+  comment_added: 'Comment added',
+  task_completed: 'Task completed',
+  task_status_changed: 'Status changed',
+  task_due_soon: 'Due soon',
+  task_overdue: 'Task overdue',
+  sprint_started: 'Sprint started',
+  sprint_completed: 'Sprint completed',
+  milestone_due: 'Milestone due',
+};
+
+export type WorkspaceRole = 'owner' | 'admin' | 'member';
+
+export function canManageWorkspace(role: string | undefined): boolean {
+  return role === 'owner';
+}
+
+export function canManageMembers(role: string | undefined): boolean {
+  return role === 'owner' || role === 'admin';
+}
+
+export function canCreateProject(role: string | undefined): boolean {
+  return role === 'owner' || role === 'admin';
+}
+
+export function canEditProject(role: string | undefined): boolean {
+  return role === 'owner' || role === 'admin';
+}
+
+export function canDeleteProject(role: string | undefined): boolean {
+  return role === 'owner';
+}
+
+export function canCreateTask(_role: string | undefined): boolean {
+  return true;
+}
+
+export function canEditTask(_role: string | undefined): boolean {
+  return true;
+}
+
+export function canDeleteTask(role: string | undefined): boolean {
+  return role === 'owner' || role === 'admin';
+}
+
+export function canManageSprint(role: string | undefined): boolean {
+  return role === 'owner' || role === 'admin';
+}
+
+export function canComment(_role: string | undefined): boolean {
+  return true;
+}

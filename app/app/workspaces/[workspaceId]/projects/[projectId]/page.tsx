@@ -8,16 +8,21 @@ import {
   getProjectTaskStats,
 } from '@/lib/queries/tasks';
 import { getProjectSprints, getActiveSprint, getProjectOverdueTasks } from '@/lib/queries/sprints';
+import { getProjectMilestones } from '@/lib/queries/milestones';
+import { getProjectActivity } from '@/lib/queries/activity';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ComingSoon } from '@/components/shared/coming-soon';
 import { TaskBoard } from '@/components/tasks/task-board';
 import { KanbanBoard } from '@/components/tasks/kanban-board';
 import { BacklogView } from '@/components/tasks/backlog-view';
 import { SprintsView } from '@/components/tasks/sprints-view';
+import { CalendarView } from '@/components/tasks/calendar-view';
+import { TimelineView } from '@/components/tasks/timeline-view';
+import { ProjectMilestones } from '@/components/tasks/project-milestones';
+import { ProjectActivityFeed } from '@/components/tasks/project-activity-feed';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
   ArrowLeft,
@@ -30,6 +35,7 @@ import {
   CircleDot,
   AlertTriangle,
   Rocket,
+  Activity,
 } from 'lucide-react';
 import { getSprintStatusInfo } from '@/lib/types/tasks';
 import { cn } from '@/lib/utils';
@@ -55,6 +61,8 @@ export default async function ProjectDetailPage({
   const overdueCount = await getProjectOverdueTasks(project.id);
   const sprints = await getProjectSprints(project.id);
   const activeSprint = await getActiveSprint(project.id);
+  const milestones = await getProjectMilestones(project.id);
+  const activity = await getProjectActivity(project.id);
 
   const supabase = createClient();
   const {
@@ -113,6 +121,8 @@ export default async function ProjectDetailPage({
           <TabsTrigger value="board">Board</TabsTrigger>
           <TabsTrigger value="backlog">Backlog</TabsTrigger>
           <TabsTrigger value="sprints">Sprints</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
         {/* Overview */}
@@ -237,6 +247,28 @@ export default async function ProjectDetailPage({
             </CardContent>
           </Card>
 
+          {/* Milestones */}
+          <ProjectMilestones
+            milestones={milestones}
+            workspaceId={workspace.id}
+            projectId={project.id}
+          />
+
+          {/* Activity feed */}
+          {activity.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="h-4 w-4" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProjectActivityFeed activity={activity.slice(0, 8)} />
+              </CardContent>
+            </Card>
+          )}
+
           {tasks.length > 0 && (
             <Card className="mt-6">
               <CardHeader>
@@ -305,6 +337,32 @@ export default async function ProjectDetailPage({
             tasks={tasks}
             members={members}
             labels={labels}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
+        </TabsContent>
+
+        {/* Calendar */}
+        <TabsContent value="calendar" className="mt-6">
+          <CalendarView
+            tasks={tasks}
+            milestones={milestones}
+            members={members}
+            labels={labels}
+            sprints={sprints}
+            workspaceId={workspace.id}
+            projectId={project.id}
+            currentUserId={currentUserId}
+          />
+        </TabsContent>
+
+        {/* Timeline */}
+        <TabsContent value="timeline" className="mt-6">
+          <TimelineView
+            tasks={tasks}
+            milestones={milestones}
+            members={members}
             workspaceId={workspace.id}
             projectId={project.id}
             currentUserId={currentUserId}

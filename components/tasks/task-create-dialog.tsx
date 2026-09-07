@@ -41,6 +41,7 @@ interface TaskCreateDialogProps {
   labels: LabelType[];
   parentTaskId?: string | null;
   defaultStatus?: TaskStatus;
+  preselectedDueDate?: string | null;
   onCreated?: () => void;
 }
 
@@ -53,6 +54,7 @@ export function TaskCreateDialog({
   labels,
   parentTaskId = null,
   defaultStatus = 'todo',
+  preselectedDueDate = null,
   onCreated,
 }: TaskCreateDialogProps) {
   const router = useRouter();
@@ -73,11 +75,11 @@ export function TaskCreateDialog({
       setStatus(defaultStatus);
       setPriority('none');
       setAssigneeId('unassigned');
-      setDueDate('');
+      setDueDate(preselectedDueDate ?? '');
       setSelectedLabels([]);
       setError(null);
     }
-  }, [open, defaultStatus]);
+  }, [open, defaultStatus, preselectedDueDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
